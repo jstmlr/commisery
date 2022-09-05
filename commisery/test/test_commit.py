@@ -15,7 +15,7 @@
 from commisery.checking import validate_commit_message
 from commisery.config import Configuration
 import pytest
-from ..commit import CommitMessage, Footer
+from ..commit import parse_commit_message, parse_commit_message
 
 
 def test_basic_message_strip_and_splitup():
@@ -28,7 +28,7 @@ def test_basic_message_strip_and_splitup():
       * paragraph splitting
       * body extraction
     """
-    message = CommitMessage.from_message(
+    message = parse_commit_message(
         """\
 
 # test stripping of comments and preceding empty lines
@@ -57,15 +57,13 @@ in the output.
     )
 
     assert (
-        message.body[1]
+        message.lines[2]
         == """In order to prevent users from thinking they're seeing a bug in Hopic."""
     )
 
 
 def test_conventional_scoped_improvement():
-    message = CommitMessage.from_message(
-        "improvement(config): display config error messages without backtrace"
-    )
+    message = parse_commit_message("improvement(config): display config error messages without backtrace")
 
     assert message.type == "improvement"
     assert message.scope == "config"
@@ -76,13 +74,11 @@ def test_conventional_scoped_improvement():
 
 
 def test_conventional_scope_with_space():
-    CommitMessage.from_message("docs(git tips): improve documentation on amending")
+    parse_commit_message("docs(git tips): improve documentation on amending")
 
 
 def test_conventional_fix():
-    message = CommitMessage.from_message(
-        "fix: use the common ancestor of the source and target commit for autosquash"
-    )
+    message = parse_commit_message("fix: use the common ancestor of the source and target commit for autosquash")
     assert message.type == "fix"
     assert message.scope is None
     assert not message.has_breaking_change()
@@ -91,9 +87,7 @@ def test_conventional_fix():
 
 
 def test_conventional_new_feature():
-    message = CommitMessage.from_message(
-        """feat: make execution possible with 'hopic' as command"""
-    )
+    message = parse_commit_message("""feat: make execution possible with 'hopic' as command""")
     assert message.type == "feat"
     assert message.scope is None
     assert not message.has_breaking_change()
@@ -102,7 +96,7 @@ def test_conventional_new_feature():
 
 
 def test_conventional_break():
-    message = CommitMessage.from_message(
+    message = parse_commit_message(
         """\
 chore: cleanup old cfg.yml default config file name
 
@@ -121,9 +115,7 @@ BREAKING-CHANGE: "${WORKSPACE}/cfg.yml" is no longer the default location
 
 
 def test_conventional_subject_break():
-    message = CommitMessage.from_message(
-        """chore!: delete deprecated 'ci-driver' command"""
-    )
+    message = parse_commit_message("""chore!: delete deprecated 'ci-driver' command""")
     assert message.type == "chore"
     assert message.scope is None
     assert message.has_breaking_change()
@@ -132,9 +124,7 @@ def test_conventional_subject_break():
 
 
 def test_conventional_subject_breaking_fix():
-    message = CommitMessage.from_message(
-        """fix!: take parameter as unsigned instead of signed int"""
-    )
+    message = parse_commit_message("""fix!: take parameter as unsigned instead of signed int""")
     assert message.type == "fix"
     assert message.scope is None
     assert message.has_breaking_change()
@@ -143,9 +133,7 @@ def test_conventional_subject_breaking_fix():
 
 
 def test_conventional_subject_breaking_new_feature():
-    message = CommitMessage.from_message(
-        """feat!: support multiple non-global current working directories"""
-    )
+    message = parse_commit_message("feat!: support multiple non-global current working directories")
     assert message.type == "feat"
     assert message.scope is None
     assert message.has_breaking_change()
@@ -154,9 +142,7 @@ def test_conventional_subject_breaking_new_feature():
 
 
 def test_conventional_fixup_fix():
-    message = CommitMessage.from_message(
-        "fixup! fix: only restore mtime for regular files and symlinks"
-    )
+    message = parse_commit_message("fixup! fix: only restore mtime for regular files and symlinks")
     assert message.type == "fix"
     assert message.scope is None
     assert message.description == "only restore mtime for regular files and symlinks"
@@ -166,7 +152,7 @@ def test_conventional_fixup_fix():
 
 
 def test_basic_footers():
-    message = CommitMessage.from_message(
+    message = parse_commit_message(
         """\
 Merge #63: something
 
@@ -179,32 +165,26 @@ Implements: PIPE-123 through the obliviator
 Acked-by: Alice <alice@example.com>
 Merged-by: Hopic 1.21.2
 Acked-by: Bob <bob@example.com>
-"""
-    )
+""")
 
-    assert message.footers == [
-        Footer("BREAKING CHANGE", ["something changed in an unpredicted way"]),
-        Footer("Addresses", ["#42 by working on finding the question"]),
-        Footer("Implements", ["PIPE-123 through the obliviator"]),
-        Footer("Acked-by", ["Alice <alice@example.com>"]),
-        Footer("Merged-by", ["Hopic 1.21.2"]),
-        Footer("Acked-by", ["Bob <bob@example.com>"]),
-    ]
+    assert tuple(tuple(footer) for footer in message.footers) == (
+        ("BREAKING CHANGE", ("something changed in an unpredicted way")),
+        ("Addresses", ("#42 by working on finding the question")),
+        ("Implements", ("PIPE-123 through the obliviator")),
+        ("Acked-by", ("Alice <alice@example.com>")),
+        ("Merged-by", ("Hopic 1.21.2")),
+        ("Acked-by", ("Bob <bob@example.com>")),
+    )
 
 
 def test_conventional_footers():
-    message = CommitMessage.from_message(
+    message = parse_commit_message(
         """\
 Merge #63: improvement(groovy): retrieve execution graph in a single 'getinfo' call
 
 This should reduce the amount of Jenkins master/slave interactions and
 their associated Groovy script engine "context switches" (state
 serialization and restoration). As a result performance should increase.
-
-vv The next two trailers will be rejected as there is a blank line inbetween vv
-Addresses #279 by adding a test framework.
-Addresses #301 due to the performance improvements
- made to the scripting engine
 
 Addresses #167 by updating testing framework dependencies
  and validating behavior
@@ -213,8 +193,7 @@ Acked-by: Joost Muller <Joost.Muller@tomtom.com>
 Acked-by: Martijn Leijssen <Martijn.Leijssen@tomtom.com>
 Acked-by: Rene Kempen <Rene.Kempen@tomtom.com>
 Merged-by: Hopic 0.10.2.dev7+g840ca0c
-"""
-    )
+""")
     assert message.type == "improvement"
     assert message.scope == "groovy"
 
@@ -222,35 +201,18 @@ Merged-by: Hopic 0.10.2.dev7+g840ca0c
     #       rejected git-trailers, for now we will ignore them and
     #       they will be considered to be part of the body of the
     #       commit message.
-
-    assert message.footers == [
-        Footer(
+    assert tuple(tuple(footer) for footer in message.footers) == (
+        (
             "Addresses",
-            [
-                "#167 by updating testing framework dependencies",
-                " and validating behavior",
-            ],
+            "#167 by updating testing framework dependencies\n and validating behavior",
         ),
-        Footer("Acked-by", ["Anton Indrawan <Anton.Indrawan@tomtom.com>"]),
-        Footer("Acked-by", ["Joost Muller <Joost.Muller@tomtom.com>"]),
-        Footer("Acked-by", ["Martijn Leijssen <Martijn.Leijssen@tomtom.com>"]),
-        Footer("Acked-by", ["Rene Kempen <Rene.Kempen@tomtom.com>"]),
-        Footer("Merged-by", ["Hopic 0.10.2.dev7+g840ca0c"]),
-    ]
+        ("Acked-by", ("Anton Indrawan <Anton.Indrawan@tomtom.com>")),
+        ("Acked-by", ("Joost Muller <Joost.Muller@tomtom.com>")),
+        ("Acked-by", ("Martijn Leijssen <Martijn.Leijssen@tomtom.com>")),
+        ("Acked-by", ("Rene Kempen <Rene.Kempen@tomtom.com>")),
+        ("Merged-by", ("Hopic 0.10.2.dev7+g840ca0c")),
+    )
 
-
-@pytest.mark.parametrize(
-    "msg",
-    (
-        "Merge branch 'main' into my-great-branch",
-        "Merge branch 'main' into 'my-great-branch'",
-        "Merge branch main into my-great-branch",
-        "Merge branch main into 'my-great-branch'",
-        "Merge branch main",
-    ),
-)
-def test_merge_commit(msg):
-    assert CommitMessage.from_message(msg).is_merge()
 
 @pytest.mark.parametrize(
     "msg, expectation",
@@ -263,4 +225,4 @@ def test_merge_commit(msg):
     ),
 )
 def test_commit_types(msg, expectation):
-    assert CommitMessage.from_message(msg).type == expectation
+    assert parse_commit_message(msg, strict=False).type == expectation
