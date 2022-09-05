@@ -38,7 +38,7 @@ try:
         for x in metadata.version("hopic").split(".")
     )
     hopic_cli = [
-        ep for ep in metadata.entry_points()["console_scripts"] if ep.name == "hopic"
+        ep for ep in metadata.entry_points().select(group="console_scripts") if ep.name == "hopic"
     ][0].load()
     from click.testing import CliRunner
     import git

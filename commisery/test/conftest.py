@@ -26,9 +26,8 @@ try:
 except ImportError:
     import importlib_metadata as metadata
 
-
 commisery_range_cli = [
-    ep for ep in metadata.entry_points()["console_scripts"] if ep.name == "cm"
+    ep for ep in metadata.entry_points().select(group="console_scripts") if ep.name == "cm"
 ][0].load()
 
 
