@@ -22,12 +22,19 @@ from commisery.commit import BREAKING_CHANGE_TOKEN, CommitMessage
 from commisery.config import Configuration, get_default_rules
 
 
+def _is_acceptable_merge_message(message: CommitMessage):
+    return (
+        re.match(r"^Merge (?:branch|tag|pull[ -]request) .*?(?: into .*)?$", message.subject)
+        is not None
+    )
+
+
 def C001_non_lower_case_type(
     message: CommitMessage, config: Configuration
 ):  # pylint: disable=C0103
     """The commit message's tag type should be in lower case"""
     # No need to verify merge commits
-    if message.is_merge():
+    if _is_acceptable_merge_message(message):
         return
 
     try:
@@ -51,13 +58,13 @@ def C002_one_whiteline_between_subject_and_body(
     message: CommitMessage, _: Configuration
 ):  # pylint: disable=C0103
     """Only one empty line between subject and body"""
-    if not message.body or message.is_merge():
+    if _is_acceptable_merge_message(message) or not message.body:
         return
 
-    if len(message.body) >= 2 and message.body[1].strip() == "":
+    if len(message.lines) > 2 and message.lines[1].strip() == message.lines[2].strip() == "":
         raise logging.Error(
             message=C002_one_whiteline_between_subject_and_body.__doc__,
-            line=os.linesep.join(message.body),
+            line=os.linesep.join(message.lines),
             column_number=logging.Range(0, len(message.body[-1])),
         )
 
@@ -67,7 +74,7 @@ def C003_title_case_description(
 ):  # pylint: disable=C0103
     """The commit message's description should not start with a capital case letter"""
     # No need to verify merge commits
-    if message.is_merge():
+    if _is_acceptable_merge_message(message):
         return
 
     try:
@@ -94,7 +101,7 @@ def C004_unknown_tag_type(
 ):  # pylint: disable=C0103
     """Commit message's subject should not contain an unknown tag type"""
     # No need to verify merge commits
-    if message.is_merge():
+    if _is_acceptable_merge_message(message):
         return
 
     try:
@@ -124,9 +131,9 @@ def C004_unknown_tag_type(
 def C005_separator_contains_trailing_whitespaces(
     message: CommitMessage, config: Configuration
 ):  # pylint: disable=C0103
-    """Only one whitespace allowed after the ":" separator"""
+    """No whitespace allowed before and only one whitespace allowed after the ":" separator"""
     # No need to verify merge commits
-    if message.is_merge():
+    if _is_acceptable_merge_message(message):
         return
 
     try:
@@ -135,14 +142,14 @@ def C005_separator_contains_trailing_whitespaces(
     except logging.Error:
         return
 
-    if message.separator != ": ":
+    if message.separator[0].isspace() or message.description[0].isspace():
         raise logging.Error(
             message=C005_separator_contains_trailing_whitespaces.__doc__,
             line=message.subject,
             column_number=logging.Range(
                 start=len(message.subject)
-                - len(message.squashed_subject)
-                + message.squashed_subject.find(message.separator)
+                - len(message.autosquashed_subject)
+                + message.autosquashed_subject.find(message.separator)
                 + 1,
                 range=len(message.separator) + len(message.description),
             ),
@@ -192,12 +199,10 @@ def C007_scope_contains_whitespace(
         )
 
 
-def C008_missing_separator(
-    message: CommitMessage, _: Configuration
-):  # pylint: disable=C0103
+def C008_missing_separator(message: CommitMessage, _: Configuration):  # pylint: disable=C0103
     """The commit message's subject requires a separator (": ") after the type tag"""
     # No need to verify merge commits
-    if message.is_merge():
+    if _is_acceptable_merge_message(message):
         return
 
     if ":" not in message.separator:
@@ -233,19 +238,19 @@ def C010_breaking_indicator_contains_whitespacing(
     message: CommitMessage, _: Configuration
 ):  # pylint: disable=C0103
     """No whitespace allowed around the "!" indicator"""
-    if not message.breaking_change:
+    if message.breaking_subject is None:
         return
 
-    if message.breaking_change.strip() is not message.breaking_change:
+    if message.breaking_subject.strip() is not message.breaking_subject:
         raise logging.Error(
             message=C010_breaking_indicator_contains_whitespacing.__doc__,
             line=message.subject,
             column_number=logging.Range(
                 start=len(message.subject)
-                - len(message.squashed_subject)
-                + message.squashed_subject.find(message.breaking_change)
+                - len(message.autosquashed_subject)
+                + message.autosquashed_subject.find(message.breaking_subject)
                 + 1,
-                range=len(message.breaking_change),
+                range=len(message.breaking_subject),
             ),
             expectations=f"!{message.separator}{message.description}",
         )
@@ -254,22 +259,21 @@ def C010_breaking_indicator_contains_whitespacing(
 def C011_only_single_breaking_indicator(
     message: CommitMessage, _: Configuration
 ):  # pylint: disable=C0103
-    """Breaking separator should consist of only one indicator"""
+    """Breaking subject indicator should consist of a single exclamation mark"""
 
-    # NOTE: the breaking indicator is OPTIONAL
-    if not message.breaking_change:
+    if not message.breaking_subject:
         return
 
-    if len(message.breaking_change.strip()) > 1:
+    if len(message.breaking_subject.strip()) > 1:
         raise logging.Error(
             message=C011_only_single_breaking_indicator.__doc__,
             line=message.subject,
             column_number=logging.Range(
                 start=len(message.subject)
-                - len(message.squashed_subject)
-                + message.squashed_subject.find("!")
+                - len(message.autosquashed_subject)
+                + message.autosquashed_subject.find("!")
                 + 1,
-                range=len(message.breaking_change.strip()),
+                range=len(message.breaking_subject.strip()),
             ),
             expectations="!",
         )
@@ -292,7 +296,7 @@ def C013_subject_should_not_end_with_punctuation(
 ):  # pylint: disable=C0103
     """The commit message's subject should not end with punctuation"""
     # No need to verify merge commits
-    if message.is_merge():
+    if _is_acceptable_merge_message(message):
         return
 
     if re.match(r".*[.!?,]$", message.description):
@@ -308,7 +312,7 @@ def C014_subject_exceeds_line_lenght_limit(
 ):  # pylint: disable=C0103
     """The commit message's subject should be within the line length limit"""
     # No need to verify merge commits
-    if message.is_merge():
+    if _is_acceptable_merge_message(message):
         return
 
     if len(message.subject) > config.max_subject_length:
@@ -420,7 +424,8 @@ def C018_missing_empty_line_between_subject_and_body(
     if not message.body:
         return
 
-    if message.body[0]:
+    # subject_end is the last character of the subject, so we expect two newlines
+    if message.body_start - message.subject_end < 2:
         raise logging.Error(
             message=C018_missing_empty_line_between_subject_and_body.__doc__,
         )
@@ -431,7 +436,7 @@ def C019_subject_contains_issue_reference(
 ):  # pylint:  disable=C0103
     """The commit message's subject should not contain a ticket reference"""
     # No need to verify merge commits
-    if message.is_merge():
+    if _is_acceptable_merge_message(message):
         return
 
     issue_regex = re.compile(
@@ -477,8 +482,13 @@ def C022_footer_contains_blank_line(
     message: CommitMessage, _: Configuration
 ):  # pylint: disable=C0103
     """Footer should not contain any blank line(s)"""
-    for item in message.footers:
-        if not item.token or len(item.value) == 0:
+    if len(message.footers) >= 1:
+        first_footer = 0
+        # We allow for one paragraph after "BREAKING CHANGE" only, which _must_ be the first footer
+        if message.footers[0].token == BREAKING_CHANGE_TOKEN:
+            first_footer = 1
+
+        if message.paragraph_separator in message.message[message.footer_start(first_footer) :]:
             raise logging.Error(
                 message=C022_footer_contains_blank_line.__doc__,
             )
