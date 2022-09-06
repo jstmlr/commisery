@@ -26,11 +26,9 @@ from commisery.config import Configuration, get_default_rules
 
 COMMIT = typing.Union[CommitMessage, ConventionalCommit]
 
+
 def _is_acceptable_merge_message(message: COMMIT):
-    return (
-        re.match(r"^Merge (?:branch|tag|pull[ -]request) .*?(?: into .*)?$", message.subject)
-        is not None
-    )
+    return re.match(r"^Merge (?:branch|tag|pull[ -]request) .*?(?: into .*)?$", message.subject) is not None
 
 
 def C001_non_lower_case_type(message: COMMIT, config: Configuration):
@@ -134,10 +132,7 @@ def C005_separator_contains_trailing_whitespaces(message: COMMIT, config: Config
             message=C005_separator_contains_trailing_whitespaces.__doc__,
             line=message.subject,
             column_number=logging.Range(
-                start=len(message.subject)
-                - len(message.autosquashed_subject)
-                + message.autosquashed_subject.find(message.separator)
-                + 1,
+                start=len(message.subject) - len(message.autosquashed_subject) + message.autosquashed_subject.find(message.separator) + 1,
                 range=len(message.separator) + len(message.description),
             ),
             expectations=f": {message.description}",
@@ -154,9 +149,7 @@ def C006_scope_should_not_be_empty(message: COMMIT, _: Configuration):
         raise logging.Error(
             message=C006_scope_should_not_be_empty.__doc__,
             line=message.subject,
-            column_number=logging.Range(
-                start=message.subject.find("(") + 1, range=len(message.scope) + 2
-            ),
+            column_number=logging.Range(start=message.subject.find("(") + 1, range=len(message.scope) + 2),
         )
 
 
@@ -175,9 +168,7 @@ def C007_scope_contains_whitespace(message: COMMIT, config: Configuration):
         raise logging.Error(
             message=C007_scope_contains_whitespace.__doc__,
             line=message.subject,
-            column_number=logging.Range(
-                start=message.subject.find("(") + 2, range=len(message.scope)
-            ),
+            column_number=logging.Range(start=message.subject.find("(") + 2, range=len(message.scope)),
             expectations=message.scope.strip(),
         )
 
@@ -243,10 +234,7 @@ def C011_only_single_breaking_indicator(message: COMMIT, _: Configuration):
             message=C011_only_single_breaking_indicator.__doc__,
             line=message.subject,
             column_number=logging.Range(
-                start=len(message.subject)
-                - len(message.autosquashed_subject)
-                + message.autosquashed_subject.find("!")
-                + 1,
+                start=len(message.subject) - len(message.autosquashed_subject) + message.autosquashed_subject.find("!") + 1,
                 range=len(message.breaking_subject.strip()),
             ),
             expectations="!",
@@ -364,9 +352,7 @@ def C016_description_in_imperative_mood(message: COMMIT, config: Configuration):
         "verifies",
         "verifying",
     )
-    blacklist = re.compile(
-        "|".join(re.escape(w) for w in common_non_imperative_verbs), re.IGNORECASE
-    )
+    blacklist = re.compile("|".join(re.escape(w) for w in common_non_imperative_verbs), re.IGNORECASE)
     blacklisted_verbs = blacklist.match(message.description)
 
     if blacklisted_verbs:
@@ -398,9 +384,7 @@ def C018_missing_empty_line_between_subject_and_body(message: COMMIT, _: Configu
         )
 
 
-def C019_subject_contains_issue_reference(
-    message: COMMIT, _: Configuration
-):  # pylint:  disable=C0103
+def C019_subject_contains_issue_reference(message: COMMIT, _: Configuration):  # pylint:  disable=C0103
     """The commit message's subject should not contain a ticket reference"""
     # No need to verify merge commits
     if _is_acceptable_merge_message(message):
@@ -430,9 +414,7 @@ def C019_subject_contains_issue_reference(
         )
 
 
-def C020_git_trailer_contains_whitespace(
-    message: COMMIT, _: Configuration
-):  # pylint:  disable=C0103
+def C020_git_trailer_contains_whitespace(message: COMMIT, _: Configuration):  # pylint:  disable=C0103
     """Git-trailer should not contain whitespace(s)"""
     for item in message.footers:
         if " " in item.token and item.token != "BREAKING CHANGE":

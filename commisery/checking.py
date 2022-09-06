@@ -35,12 +35,8 @@ def check_commit(commit, config: Configuration):
             message = file.read()
 
     except IOError:
-        commit = subprocess.check_output(("git", "rev-parse", commit))[:-1].decode(
-            "UTF-8"
-        )
-        message = subprocess.check_output(
-            ("git", "show", "-q", "--format=%B", commit, "--")
-        )[:-1].decode("UTF-8")
+        commit = subprocess.check_output(("git", "rev-parse", commit))[:-1].decode("UTF-8")
+        message = subprocess.check_output(("git", "show", "-q", "--format=%B", commit, "--"))[:-1].decode("UTF-8")
 
     commit_message = parse_commit_message(message)
     commit_message.hexsha = commit
@@ -52,8 +48,6 @@ def validate_commit_message(message: typing.Union[CommitMessage, ConventionalCom
     """Validates the provided commit message against specification"""
     error_count = 0
     for rule in config.rules:
-        error_count += validate_commit_message_rule(
-            rule=rule, message=message, config=config
-        )
+        error_count += validate_commit_message_rule(rule=rule, message=message, config=config)
 
     return 1 if error_count > 0 else 0
