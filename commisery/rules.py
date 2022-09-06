@@ -21,6 +21,8 @@ import llvm_diagnostics as logging
 from commisery.commit import BREAKING_CHANGE_TOKEN, CommitMessage
 from commisery.config import Configuration, get_default_rules
 
+# pylint: disable=C0103  # disable `invalid-name`-checking
+
 
 def _is_acceptable_merge_message(message: CommitMessage):
     return (
@@ -29,9 +31,7 @@ def _is_acceptable_merge_message(message: CommitMessage):
     )
 
 
-def C001_non_lower_case_type(
-    message: CommitMessage, config: Configuration
-):  # pylint: disable=C0103
+def C001_non_lower_case_type(message: CommitMessage, config: Configuration):
     """The commit message's tag type should be in lower case"""
     # No need to verify merge commits
     if _is_acceptable_merge_message(message):
@@ -47,16 +47,12 @@ def C001_non_lower_case_type(
         raise logging.Error(
             message=C001_non_lower_case_type.__doc__,
             line=message.subject,
-            column_number=logging.Range(
-                message.subject.find(message.type) + 1, len(message.type)
-            ),
+            column_number=logging.Range(message.subject.find(message.type) + 1, len(message.type)),
             expectations=message.type.lower(),
         )
 
 
-def C002_one_whiteline_between_subject_and_body(
-    message: CommitMessage, _: Configuration
-):  # pylint: disable=C0103
+def C002_one_whiteline_between_subject_and_body(message: CommitMessage, _: Configuration):
     """Only one empty line between subject and body"""
     if _is_acceptable_merge_message(message) or not message.body:
         return
@@ -69,9 +65,7 @@ def C002_one_whiteline_between_subject_and_body(
         )
 
 
-def C003_title_case_description(
-    message: CommitMessage, config: Configuration
-):  # pylint: disable=C0103
+def C003_title_case_description(message: CommitMessage, config: Configuration):
     """The commit message's description should not start with a capital case letter"""
     # No need to verify merge commits
     if _is_acceptable_merge_message(message):
@@ -96,9 +90,7 @@ def C003_title_case_description(
         )
 
 
-def C004_unknown_tag_type(
-    message: CommitMessage, config: Configuration
-):  # pylint: disable=C0103
+def C004_unknown_tag_type(message: CommitMessage, config: Configuration):
     """Commit message's subject should not contain an unknown tag type"""
     # No need to verify merge commits
     if _is_acceptable_merge_message(message):
@@ -111,26 +103,18 @@ def C004_unknown_tag_type(
         return
 
     if message.type not in config.tags:
-        closest_match = difflib.get_close_matches(
-            message.type.lower(), config.tags, n=1
-        )
-        closest_match = (
-            closest_match[0] if closest_match else f"{', '.join(config.tags)}"
-        )
+        closest_match = difflib.get_close_matches(message.type.lower(), config.tags, n=1)
+        closest_match = closest_match[0] if closest_match else f"{', '.join(config.tags)}"
 
         raise logging.Error(
             message=f"{C004_unknown_tag_type.__doc__}. Use one of: feat, fix, {', '.join(config.tags)}",
             line=message.subject,
-            column_number=logging.Range(
-                message.subject.find(message.type) + 1, len(message.type)
-            ),
+            column_number=logging.Range(message.subject.find(message.type) + 1, len(message.type)),
             expectations=closest_match,
         )
 
 
-def C005_separator_contains_trailing_whitespaces(
-    message: CommitMessage, config: Configuration
-):  # pylint: disable=C0103
+def C005_separator_contains_trailing_whitespaces(message: CommitMessage, config: Configuration):
     """No whitespace allowed before and only one whitespace allowed after the ":" separator"""
     # No need to verify merge commits
     if _is_acceptable_merge_message(message):
@@ -157,9 +141,7 @@ def C005_separator_contains_trailing_whitespaces(
         )
 
 
-def C006_scope_should_not_be_empty(
-    message: CommitMessage, _: Configuration
-):  # pylint: disable=C0103
+def C006_scope_should_not_be_empty(message: CommitMessage, _: Configuration):
     """The commit message's scope should not be empty"""
     # NOTE: the scope is OPTIONAL
     if message.scope is None:
@@ -175,9 +157,7 @@ def C006_scope_should_not_be_empty(
         )
 
 
-def C007_scope_contains_whitespace(
-    message: CommitMessage, config: Configuration
-):  # pylint: disable=C0103
+def C007_scope_contains_whitespace(message: CommitMessage, config: Configuration):
     """The commit message's scope should not contain any whitespacing"""
     # NOTE: the scope is OPTIONAL
     if message.scope is None:
@@ -199,7 +179,7 @@ def C007_scope_contains_whitespace(
         )
 
 
-def C008_missing_separator(message: CommitMessage, _: Configuration):  # pylint: disable=C0103
+def C008_missing_separator(message: CommitMessage, _: Configuration):
     """The commit message's subject requires a separator (": ") after the type tag"""
     # No need to verify merge commits
     if _is_acceptable_merge_message(message):
@@ -210,18 +190,14 @@ def C008_missing_separator(message: CommitMessage, _: Configuration):  # pylint:
             message=C008_missing_separator.__doc__,
             line=message.subject,
             column_number=logging.Range(
-                start=message.subject.find(message.description)
-                - len(message.separator)
-                + 1,
+                start=message.subject.find(message.description) - len(message.separator) + 1,
                 range=len(message.description) + len(message.separator),
             ),
             expectations=f": {message.description}",
         )
 
 
-def C009_missing_description(
-    message: CommitMessage, _: Configuration
-):  # pylint: disable=C0103
+def C009_missing_description(message: CommitMessage, _: Configuration):
     """The commit message requires a description"""
 
     if not message.description:
@@ -234,9 +210,7 @@ def C009_missing_description(
         )
 
 
-def C010_breaking_indicator_contains_whitespacing(
-    message: CommitMessage, _: Configuration
-):  # pylint: disable=C0103
+def C010_breaking_indicator_contains_whitespacing(message: CommitMessage, _: Configuration):
     """No whitespace allowed around the "!" indicator"""
     if message.breaking_subject is None:
         return
@@ -256,9 +230,7 @@ def C010_breaking_indicator_contains_whitespacing(
         )
 
 
-def C011_only_single_breaking_indicator(
-    message: CommitMessage, _: Configuration
-):  # pylint: disable=C0103
+def C011_only_single_breaking_indicator(message: CommitMessage, _: Configuration):
     """Breaking subject indicator should consist of a single exclamation mark"""
 
     if not message.breaking_subject:
@@ -279,9 +251,7 @@ def C011_only_single_breaking_indicator(
         )
 
 
-def C012_missing_type_tag(
-    message: CommitMessage, _: Configuration
-):  # pylint: disable=C0103
+def C012_missing_type_tag(message: CommitMessage, _: Configuration):
     """The commit message's subject requires a type"""
 
     if not message.type:
@@ -291,9 +261,7 @@ def C012_missing_type_tag(
         )
 
 
-def C013_subject_should_not_end_with_punctuation(
-    message: CommitMessage, _: Configuration
-):  # pylint: disable=C0103
+def C013_subject_should_not_end_with_punctuation(message: CommitMessage, _: Configuration):
     """The commit message's subject should not end with punctuation"""
     # No need to verify merge commits
     if _is_acceptable_merge_message(message):
@@ -307,9 +275,7 @@ def C013_subject_should_not_end_with_punctuation(
         )
 
 
-def C014_subject_exceeds_line_lenght_limit(
-    message: CommitMessage, config: Configuration
-):  # pylint: disable=C0103
+def C014_subject_exceeds_line_lenght_limit(message: CommitMessage, config: Configuration):
     """The commit message's subject should be within the line length limit"""
     # No need to verify merge commits
     if _is_acceptable_merge_message(message):
@@ -326,9 +292,7 @@ def C014_subject_exceeds_line_lenght_limit(
         )
 
 
-def C015_no_repeated_tags(
-    message: CommitMessage, config: Configuration
-):  # pylint: disable=C0103
+def C015_no_repeated_tags(message: CommitMessage, config: Configuration):
     """Description should not start with a repetition of the tag"""
 
     try:
@@ -349,9 +313,7 @@ def C015_no_repeated_tags(
         )
 
 
-def C016_description_in_imperative_mood(
-    message: CommitMessage, _: Configuration
-):  # pylint: disable=C0103
+def C016_description_in_imperative_mood(message: CommitMessage, _: Configuration):
     """The commit message's description should be written in imperative mood"""
 
     common_non_imperative_verbs = (
@@ -408,16 +370,12 @@ def C016_description_in_imperative_mood(
         )
 
 
-def C017_subject_contains_review_remarks(
-    _: CommitMessage, __: Configuration
-):  # pylint: disable=C0103
+def C017_subject_contains_review_remarks(_: CommitMessage, __: Configuration):
     """Subject should not contain reference to review comments"""
     # TODO: implement this rule
 
 
-def C018_missing_empty_line_between_subject_and_body(
-    message: CommitMessage, _: Configuration
-):  # pylint: disable=C0103
+def C018_missing_empty_line_between_subject_and_body(message: CommitMessage, _: Configuration):
     """The commit message should contain an empty line between subject and body"""
 
     # NOTE: the body is OPTIONAL
@@ -459,9 +417,7 @@ def C019_subject_contains_issue_reference(
         raise logging.Error(
             message=C019_subject_contains_issue_reference.__doc__,
             line=message.subject,
-            column_number=logging.Range(
-                message.subject.find(issues[0]) + 1, len(issues[0])
-            ),
+            column_number=logging.Range(message.subject.find(issues[0]) + 1, len(issues[0])),
         )
 
 
@@ -478,10 +434,9 @@ def C020_git_trailer_contains_whitespace(
             )
 
 
-def C022_footer_contains_blank_line(
-    message: CommitMessage, _: Configuration
-):  # pylint: disable=C0103
+def C022_footer_contains_blank_line(message: CommitMessage, _: Configuration):
     """Footer should not contain any blank line(s)"""
+
     if len(message.footers) >= 1:
         first_footer = 0
         # We allow for one paragraph after "BREAKING CHANGE" only, which _must_ be the first footer
@@ -494,9 +449,7 @@ def C022_footer_contains_blank_line(
             )
 
 
-def C023_breaking_change_must_be_first_git_trailer(
-    message: CommitMessage, _: Configuration
-):  # pylint: disable=C0103
+def C023_breaking_change_must_be_first_git_trailer(message: CommitMessage, _: Configuration):
     """The BREAKING CHANGE git-trailer should be the first element in the footer"""
     for idx, item in enumerate(message.footers):
         if item.token == BREAKING_CHANGE_TOKEN:
@@ -508,9 +461,7 @@ def C023_breaking_change_must_be_first_git_trailer(
                 )
 
 
-def validate_commit_message_rule(
-    rule: str, message: CommitMessage, config: Configuration
-):
+def validate_commit_message_rule(rule: str, message: CommitMessage, config: Configuration):
     """Validates the specified rule #"""
     try:
         if config.rules[rule].get("enabled"):
